@@ -1,8 +1,11 @@
 script_author('GHMS | vk.com/tomlas')
-script_version('18.05.23.05')
+script_version('19.05.23')
 
 if not pcall(function() sampev = require('samp.events') end) then sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1);end
 local d=require('moonloader').download_status;
+local inicfg = require('inicfg')
+dirConfig = 'auto-ass'
+settings = inicfg.load({main = {parts=true,dialog=true,posX=420,posY=400}},dirConfig)
 
 draw = false
 mynick = ''
@@ -53,6 +56,67 @@ marker2 = 0
 sendDialog = lua_thread.create_suspended(function(id) wait(50); sampSendDialogResponse(id,1,0,'') end)
 sendDialogEx = lua_thread.create_suspended(function(id, lab, inp) wait(50); sampSendDialogResponse(id, 1, lab, inp) end)
 sendH = lua_thread.create_suspended(function() setVirtualKeyDown(0x48, true); wait(10); setVirtualKeyDown(0x48, false) end)
+sendEsc = lua_thread.create_suspended(function() if sampTextdrawIsExists(449) then setVirtualKeyDown(0x1B, true); wait(10); setVirtualKeyDown(0x1B, false) end end)
+testDialog = lua_thread.create_suspended(function()
+    local gamekeys = require 'game.keys'
+    local parts, dialog = false, false
+	setPlayerControl(PLAYER_HANDLE, false)
+	setGxtEntry('CMLUTTL', 'AutoAss')
+    setGxtEntry('CMLUMSG', string.format('Version: ~y~~h~%s', thisScript().version))
+	setGxtEntry('CMLU1', 'CHANGELOG')
+	setGxtEntry('CMLU2', string.format('PARTS ORDER: %s', settings.main.parts and '~y~on' or '~r~off'))
+	setGxtEntry('CMLU3', string.format('AUTO DIALOG: %s', settings.main.dialog and '~y~on' or '~r~off'))
+	setGxtEntry('CMLU4', 'CHANGE TEXT POSITION')
+	setGxtEntry('CMLU5', 'Exit')
+
+	local menu = createMenu('CMLUTTL', 180, 280, 200, 1, true, true, 1)
+	setMenuColumn(menu, 0, 'CMLUMSG', 'CMLU1', 'CMLU2', 'CMLU3', 'CMLU4', 'CMLU5')
+
+	setActiveMenuItem(menu, 4)
+	while true do
+		wait(0)
+		if isKeyJustPressed(0x0D) then break
+		elseif isKeyJustPressed(0x20) then
+			if getMenuItemSelected(menu) == 4 then break
+            elseif getMenuItemSelected(menu) == 0 then
+                sampShowDialog(0,'{00FF00}CHANGELOG','15.05.23 - First version\n16.05.23 - Фикс склада\n17.05.23 - Фикс сборки, автозавершение\n{ffffff}19.05.23 - Настройки, автозакрытие меню', 'ok', nil, 0)
+            elseif getMenuItemSelected(menu) == 1 then
+                settings.main.parts = not settings.main.parts
+                inicfg.save(settings, dirConfig)
+                setGxtEntry('CMLU2', string.format('PARTS ORDER: %s', settings.main.parts and '~y~on' or '~r~off'))
+            elseif getMenuItemSelected(menu) == 2 then
+                settings.main.dialog = not settings.main.dialog
+                inicfg.save(settings, dirConfig)
+                setGxtEntry('CMLU3', string.format('AUTO DIALOG: %s', settings.main.dialog and '~y~on' or '~r~off'))
+            elseif getMenuItemSelected(menu) == 3 then
+                local lastDraw = draw
+                draw = false
+                local posX, posY = 0, 0
+                sampSetCursorMode(2)
+                repeat
+                    wait(0)
+                    local spacer, textY = 22, 0
+                    posX, posY = getCursorPos()
+                    textY = posY
+                    renderFontDrawText(font,'Двигатель: 0000',  posX, textY,0xFFFFFFFF)textY = textY + spacer*1.5
+                    renderFontDrawText(font,'БамперП: 0000',    posX, textY,0xFFFFFFFF)textY = textY + spacer
+                    renderFontDrawText(font,'Колеса: 0000',     posX, textY,0xFFFFFFFF)textY = textY + spacer
+                    renderFontDrawText(font,'БамперЗ: 0000',    posX, textY,0xFFFFFFFF)textY = textY + spacer
+                    renderFontDrawText(font,'Нитро: 0000',      posX, textY,0xFFFFFFFF)textY = textY + spacer
+                    renderFontDrawText(font,'Спойлер: 0000',    posX, textY,0xFFFFFFFF)textY = textY + spacer
+                    renderFontDrawText(font,'Крыша: 0000',      posX, textY,0xFFFFFFFF)
+                    until isKeyJustPressed(0x1)
+                    sampSetCursorMode(0)
+                    settings.main.posX = posX; settings.main.posY = posY;
+                    inicfg.save(settings, dirConfig)
+                    draw = lastDraw
+			end
+		end
+	end
+	wait(0)
+	deleteMenu(menu)
+	setPlayerControl(PLAYER_HANDLE, true)
+end)
 
 mark1 = lua_thread.create_suspended(function(x, y, z)
     deleteCheckpoint(marker1)
@@ -99,11 +163,9 @@ function main()
 	if not isSampLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() and not isPlayerPlaying(PLAYER_HANDLE) do wait(111) end
     wait(1000)
-    sampRegisterChatCommand('draw', function() draw = not draw; printStringNow('draw '..tostring(draw), 300) end)
     font = renderCreateFont('Arial', 12, 13)
     mynick = sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))
     allZero()
-    textX = 420
     spacer = 22
     col1 = 0xFFFFFFFF
     col2 = 0xFFFFFFAA
@@ -111,25 +173,25 @@ function main()
 
     while 1 do wait(0)
         if draw then
-            textY = 400
-            if drawClickableText(font, 'Двигатель: '..elementList.engine,   textX, textY, col1, col2) then  getter.start('0002', 6) end textY = textY + spacer*1.5
+            textY = settings.main.posY
+            if drawClickableText(font, 'Двигатель: '..elementList.engine,       settings.main.posX, textY, col1, col2) then  getter.start('0002', 6) end textY = textY + spacer*1.5
             if elementList.bumpFront ~= 'None' and not taskList.bumpFront.put then
-                if drawClickableText(font, 'БамперП: '..elementList.bumpFront,  textX, textY, col1, col2) then  getter.start(elementList.bumpFront, 1) end textY = textY + spacer
+                if drawClickableText(font, 'БамперП: '..elementList.bumpFront,  settings.main.posX, textY, col1, col2) then  getter.start(elementList.bumpFront, 1) end textY = textY + spacer
             end
             if elementList.wheel ~= 'None' and wheelcount < 2 then
-                if drawClickableText(font, 'Колеса: '..elementList.wheel,       textX, textY, col1, col2) then  getter.start(elementList.wheel, 3) end textY = textY + spacer
+                if drawClickableText(font, 'Колеса: '..elementList.wheel,       settings.main.posX, textY, col1, col2) then  getter.start(elementList.wheel, 3) end textY = textY + spacer
             end
             if elementList.bumpRear ~= 'None' and not taskList.bumpRear.put then
-                if drawClickableText(font, 'БамперЗ: '..elementList.bumpRear,   textX, textY, col1, col2) then  getter.start(elementList.bumpRear, 2) end textY = textY + spacer
+                if drawClickableText(font, 'БамперЗ: '..elementList.bumpRear,   settings.main.posX, textY, col1, col2) then  getter.start(elementList.bumpRear, 2) end textY = textY + spacer
             end
             if elementList.nitro ~= 'None' and not taskList.nitro.put then
-                if drawClickableText(font, 'Нитро: '..elementList.nitro,        textX, textY, col1, col2) then  getter.start(elementList.nitro, 6) end textY = textY + spacer
+                if drawClickableText(font, 'Нитро: '..elementList.nitro,        settings.main.posX, textY, col1, col2) then  getter.start(elementList.nitro, 6) end textY = textY + spacer
             end
             if elementList.spoler ~= 'None' and not taskList.spoler.put then
-                if drawClickableText(font, 'Спойлер: '..elementList.spoler,     textX, textY, col1, col2) then  getter.start(elementList.spoler, 4) end textY = textY + spacer
+                if drawClickableText(font, 'Спойлер: '..elementList.spoler,     settings.main.posX, textY, col1, col2) then  getter.start(elementList.spoler, 4) end textY = textY + spacer
             end
             if elementList.roof ~= 'None' and not taskList.roof.put then
-                if drawClickableText(font, 'Крыша: '..elementList.roof,         textX, textY, col1, col2) then  getter.start(elementList.roof, 5) end textY = textY + spacer
+                if drawClickableText(font, 'Крыша: '..elementList.roof,         settings.main.posX, textY, col1, col2) then  getter.start(elementList.roof, 5) end textY = textY + spacer
             end
         end
     end
@@ -172,7 +234,7 @@ getter = {
         getter.active = true
         getter.elementType = t
         getter.findElement = element
-        getter.dialogBuy = true -- IF ZAM
+        getter.dialogBuy = settings.main.parts
         getter.find()
     end,
 }
@@ -343,15 +405,18 @@ end
 putter = lua_thread.create_suspended(function(element)
     taskList[element].put = true
     getter.put = true
-    wait(800)
     isExits = false
+    wait(300)
     for _, v in ipairs({'engine', 'bumpFront', 'wheelFront', 'wheelRear', 'nitro', 'spoler', 'bumpRear', 'roof'}) do
         if taskList[v].exits and (taskList[v].get == false or taskList[v].put == false) then
             isExits = true
         end
     end
     if isExits == false then
+        wait(300)
         sendClick:run(448)
+    else
+        sendEsc:run()
     end
 end)
 function sampev.onShowTextDraw(id, data)
@@ -598,7 +663,7 @@ function sampev.onServerMessage(color,text)
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
     if draw then
-        if dialogId == 20124 and style == 0 and title == '{FFFFFF}Работа | {ae433d}Авторынок' and (text == '{ffffff}Вы действительно желаете завершить работу в автомастерской?' or text == '{ffffff}Вы действительно желаете устроиться на работу в автомастерскую?') then
+        if settings.main.dialog and dialogId == 20124 and style == 0 and title == '{FFFFFF}Работа | {ae433d}Авторынок' and (text == '{ffffff}Вы действительно желаете завершить работу в автомастерской?' or text == '{ffffff}Вы действительно желаете устроиться на работу в автомастерскую?') then
             sendDialog:run(dialogId)
             allZero()
             return false
@@ -630,7 +695,7 @@ function sampev.onCreate3DText(id, color, pos, dist, testLOS, attachedPlayerId, 
         end
     end
 end
-
+function sampev.onSendCommand(cmd) if cmd:find('^/draw menu') then testDialog:run()elseif cmd:find('^/draw') then draw = not draw; printStringNow('draw '..tostring(draw), 300)end end
 function drawClickableText(font, text, posX, posY, color, colorA)
     renderFontDrawText(font, text, posX, posY, color)
     local textLenght = renderGetFontDrawTextLength(font, text)
