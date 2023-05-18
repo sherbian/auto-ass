@@ -1,13 +1,8 @@
 script_author('GHMS | vk.com/tomlas')
 script_version('18.05.23.05')
 
-if not pcall(function() sampev = require('samp.events') end) then
-    sampAddChatMessage('PRICES IN AUTOS: PIDORASINA<<NETY SAMP.LUA', -1)
-    sampAddChatMessage('PRICES IN AUTOS: PIDORASINA<<NETY SAMP.LUA', -1)
-    sampAddChatMessage('PRICES IN AUTOS: PIDORASINA<<NETY SAMP.LUA', -1)
-end
+if not pcall(function() sampev = require('samp.events') end) then sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1);end
 local d=require('moonloader').download_status;
-HOOKID = false
 
 draw = false
 mynick = ''
@@ -112,47 +107,7 @@ function main()
     spacer = 22
     col1 = 0xFFFFFFFF
     col2 = 0xFFFFFFAA
-    local fpath = os.getenv('TEMP') .. '\\auto-ass-version.json'
-	if doesFileExist(fpath) then os.remove(fpath)end;
-    sampAddChatMessage('Download check..',-1)
-	downloadUrlToFile('https://raw.githubusercontent.com/sherbian/auto-ass/main/version.json', fpath, function(id, status, p1, p2)
-		if status == d.STATUS_ENDDOWNLOADDATA then
-			local f = io.open(fpath, 'r')
-			if f then
-				local info = decodeJson(f:read('*a'))
-				if info and info.latest then
-					if info.latest~=thisScript().version then
-						lua_thread.create(function()
-							local m=-1;
-							local b='auto-ass (o|o) '
-							sampAddChatMessage(b..'Обнаружено обновление. Пытаюсь обновиться c '..thisScript().version..' на '..info.latest,m)
-							wait(250)
-							downloadUrlToFile(info.url,thisScript().path,function(n,o,p,q)
-								if o==d.STATUS_DOWNLOADINGDATA then 
-									print(string.format('Загружено %d из %d.',p,q))
-								elseif o==d.STATUS_ENDDOWNLOADDATA then print('Загрузка обновления завершена.')
-									sampAddChatMessage(b..'Обновление завершено!',m)
-									goupdatestatus=true;
-									lua_thread.create(function()
-										wait(500)
-										thisScript():reload()
-									end)
-								end;
-								if o==d.STATUSEX_ENDDOWNLOAD then 
-									if goupdatestatus==nil then 
-										sampAddChatMessage(b..'Обновление прошло неудачно. Запускаю устаревшую версию..',m)
-									end 
-								end 
-							end)
-						end)
-                    else sampAddChatMessage('Обновление не требуется..',-1)
-					end
-                else sampAddChatMessage('Error info..',-1)
-				end
-			end
-        else sampAddChatMessage('Error download..',-1)
-		end
-	end)
+    local fpath = os.getenv('TEMP') .. '\\auto-ass-version.json';if doesFileExist(fpath) then os.remove(fpath)end;downloadUrlToFile('https://raw.githubusercontent.com/sherbian/auto-ass/main/version.json', fpath, function(id, status, p1, p2)if status == d.STATUS_ENDDOWNLOADDATA then local f = io.open(fpath, 'r') if f then local info = decodeJson(f:read('*a'))if info and info.latest then if info.latest~=thisScript().version then lua_thread.create(function()local m=-1;local b='auto-ass (o|o) ';sampAddChatMessage(b..'Обновочка. c '..thisScript().version..' на '..info.latest,m)wait(250)downloadUrlToFile(info.url,thisScript().path,function(n,o,p,q)if o==d.STATUS_DOWNLOADINGDATA then print(string.format('Загружено %d из %d.',p,q))elseif o==d.STATUS_ENDDOWNLOADDATA then print('Загрузка завершена')sampAddChatMessage(b..'Обновление завершено!',m)goupdatestatus=true;lua_thread.create(function()wait(500)thisScript():reload()end)end;if o==d.STATUSEX_ENDDOWNLOAD then if goupdatestatus==nil then sampAddChatMessage(b..'Ошибка автообновления',m)end end end)end)end end end end end)
 
     while 1 do wait(0)
         if draw then
