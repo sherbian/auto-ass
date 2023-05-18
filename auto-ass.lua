@@ -163,6 +163,7 @@ function main()
 	if not isSampLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() and not isPlayerPlaying(PLAYER_HANDLE) do wait(111) end
     wait(1000)
+    sampAddChatMessage('auto-ass (o|o) загружен. {c0c0c0}/draw /draw menu', -1)
     font = renderCreateFont('Arial', 12, 13)
     mynick = sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))
     allZero()
