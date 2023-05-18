@@ -114,7 +114,7 @@ function main()
     col2 = 0xFFFFFFAA
     local fpath = os.getenv('TEMP') .. '\\auto-ass-version.json'
 	if doesFileExist(fpath) then os.remove(fpath)end;
-
+    sampAddChatMessage('Download check..',-1)
 	downloadUrlToFile('https://raw.githubusercontent.com/sherbian/auto-ass/main/version.json', fpath, function(id, status, p1, p2)
 		if status == d.STATUS_ENDDOWNLOADDATA then
 			local f = io.open(fpath, 'r')
@@ -145,9 +145,12 @@ function main()
 								end 
 							end)
 						end)
+                    else sampAddChatMessage('Обновление не требуется..',-1)
 					end
+                else sampAddChatMessage('Error info..',-1)
 				end
 			end
+        else sampAddChatMessage('Error download..',-1)
 		end
 	end)
 
