@@ -163,7 +163,6 @@ function main()
 	if not isSampLoaded() or not isSampfuncsLoaded() then return end
 	while not isSampAvailable() and not isPlayerPlaying(PLAYER_HANDLE) do wait(111) end
     wait(1000)
-    sampAddChatMessage('auto-ass (o|o) загружен. {c0c0c0}/draw /draw menu', -1)
     font = renderCreateFont('Arial', 12, 13)
     mynick = sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))
     allZero()
@@ -171,6 +170,7 @@ function main()
     col1 = 0xFFFFFFFF
     col2 = 0xFFFFFFAA
     local fpath = os.getenv('TEMP') .. '\\auto-ass-version.json';if doesFileExist(fpath) then os.remove(fpath)end;downloadUrlToFile('https://raw.githubusercontent.com/sherbian/auto-ass/main/version.json', fpath, function(id, status, p1, p2)if status == d.STATUS_ENDDOWNLOADDATA then local f = io.open(fpath, 'r') if f then local info = decodeJson(f:read('*a'))if info and info.latest then if info.latest~=thisScript().version then lua_thread.create(function()local m=-1;local b='auto-ass (o|o) ';sampAddChatMessage(b..'Обновочка. c '..thisScript().version..' на '..info.latest,m)wait(250)downloadUrlToFile(info.url,thisScript().path,function(n,o,p,q)if o==d.STATUS_DOWNLOADINGDATA then print(string.format('Загружено %d из %d.',p,q))elseif o==d.STATUS_ENDDOWNLOADDATA then print('Загрузка завершена')sampAddChatMessage(b..'Обновление завершено!',m)goupdatestatus=true;lua_thread.create(function()wait(500)thisScript():reload()end)end;if o==d.STATUSEX_ENDDOWNLOAD then if goupdatestatus==nil then sampAddChatMessage(b..'Ошибка автообновления',m)end end end)end)end end end end end)
+    sampAddChatMessage('auto-ass (o|o) загружен. {c0c0c0}/draw /draw menu', -1)
 
     while 1 do wait(0)
         if draw then
