@@ -1,5 +1,5 @@
 script_author('GHMS | vk.com/tomlas')
-script_version('21.05.23')
+script_version('23.05.23')
 
 if not pcall(function() sampev = require('samp.events') end) then sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1)sampAddChatMessage('NETY SAMP.LUA', -1);end
 local d=require('moonloader').download_status;
@@ -11,10 +11,23 @@ inicfg.save(settings, dirConfig)
 draw = false
 mynick = ''
 wheelcount = 0
+lastActive = 'None'
 carPos = {
     x=1910.6994628906, 
     y=652.15032958984, 
     z=10.714400291443,
+    getRight = function()
+        radius = 1.3
+        x1 = carPos.x + radius * math.sin(math.rad(100))
+        y1 = carPos.y + radius * math.cos(math.rad(100))
+        return {x=x1, y=y1,z=carPos.z}
+    end,
+    getLeft = function()
+        radius = 1.3
+        x1 = carPos.x + radius * math.sin(math.rad(260))
+        y1 = carPos.y + radius * math.cos(math.rad(260))
+        return {x=x1, y=y1,z=carPos.z}
+    end,
     getPosFront = function()
         radius = 2.7
         x1 = carPos.x + radius * math.sin(math.rad(0))
@@ -22,21 +35,21 @@ carPos = {
         return {x=x1, y=y1,z=carPos.z}
     end,
     getPosRear = function()
-        radius = 2.9
+        radius = 2.95
         x1 = carPos.x + radius * math.sin(math.rad(180))
         y1 = carPos.y + radius * math.cos(math.rad(180))
         return {x=x1, y=y1,z=carPos.z}
     end,
     getPosWheelFrontRight = function()
         radius = 1.6
-        x1 = carPos.x + radius * math.sin(math.rad(45))
-        y1 = carPos.y + radius * math.cos(math.rad(45))
+        x1 = carPos.x + radius * math.sin(math.rad(50))
+        y1 = carPos.y + radius * math.cos(math.rad(50))
         return {x=x1, y=y1,z=carPos.z}
     end,
     getPosWheelFrontLeft = function()
         radius = 1.6
-        x1 = carPos.x + radius * math.sin(math.rad(315))
-        y1 = carPos.y + radius * math.cos(math.rad(315))
+        x1 = carPos.x + radius * math.sin(math.rad(310))
+        y1 = carPos.y + radius * math.cos(math.rad(310))
         return {x=x1, y=y1,z=carPos.z}
     end,
     getPosWheelRearRight = function()
@@ -53,8 +66,9 @@ carPos = {
     end,
 }
 buttonList = {}
-marker1 = 0
-marker2 = 0
+markers = {}
+_markers = {}
+
 sendDialog = lua_thread.create_suspended(function(id) wait(50); sampSendDialogResponse(id,1,0,'') end)
 sendDialogEx = lua_thread.create_suspended(function(id, lab, inp) wait(50); sampSendDialogResponse(id, 1, lab, inp) end)
 sendH = lua_thread.create_suspended(function() setVirtualKeyDown(0x48, true); wait(10); setVirtualKeyDown(0x48, false) end)
@@ -87,7 +101,7 @@ dialogSettings = lua_thread.create_suspended(function()
 		elseif isKeyJustPressed(0x20) then
 			if getMenuItemSelected(menu) == 5 then break
             elseif getMenuItemSelected(menu) == 0 then
-                sampShowDialog(0,'{00FF00}CHANGELOG','15.05.23 - First version\n16.05.23 - Фикс склада\n17.05.23 - Фикс сборки, автозавершение\n19.05.23 - Настройки, автозакрытие меню\n{ffffff}21.05.23 - Добавлены 2 способа запуска поиска детали:\n\t- номерная клавиша [n] детали\n\t- при открытии меню', 'ok', nil, 0)
+                sampShowDialog(0,'{00FF00}CHANGELOG','15.05.23 - First version\n16.05.23 - Фикс склада\n17.05.23 - Фикс сборки, автозавершение\n19.05.23 - Настройки, автозакрытие меню\n21.05.23 - Добавлены 2 способа запуска поиска детали:\n\t- номерная клавиша [n] детали\n\t- при открытии меню\n{ffffff}23.05.23 - Исправление точек', 'ok', nil, 0)
             elseif getMenuItemSelected(menu) == 1 then
                 settings.main.parts = not settings.main.parts
                 inicfg.save(settings, dirConfig)
@@ -129,39 +143,29 @@ dialogSettings = lua_thread.create_suspended(function()
 	deleteMenu(menu)
 	setPlayerControl(PLAYER_HANDLE, true)
 end)
-
-mark1 = lua_thread.create_suspended(function(x, y, z)
-    deleteCheckpoint(marker1)
-    marker1 = createCheckpoint(1, x, y, z, 1, 1, 1, 0.4)
+_marker = function(x, y, z, multi, _id)
+    if not multi then for _, h in ipairs(markers) do deleteCheckpoint(h)end markers={}; for i = 1, 8, 1 do if i ~= _id then _markers[i]:terminate() end end end
+    local k = #markers + 1
+    markers[k] = createCheckpoint(1, x, y, z, 1, 1, 1, 0.4)
     repeat
         wait(0)
         local x1, y1, z1 = getCharCoordinates(PLAYER_PED)
-        until getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < 0.5
-    deleteCheckpoint(marker1)
-    deleteCheckpoint(marker2)
-    mark2:terminate()
+        until (getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < 0.5) or not markers[k]
+    for _, h in ipairs(markers) do deleteCheckpoint(h)end markers={}; for i = 1, 8, 1 do if i ~= _id then _markers[i]:terminate() end end
     addOneOffSound(0, 0, 0, 1149)
-    for i = 0, 7, 1 do
+    for i = 0, 8, 1 do
         setVirtualKeyDown(0x48, true); wait(30); setVirtualKeyDown(0x48, false)
         wait(10)
     end
-end)
-mark2 = lua_thread.create_suspended(function(x, y, z)
-    deleteCheckpoint(marker2)
-    marker2 = createCheckpoint(1, x, y, z, 1, 1, 1, 0.4)
-    repeat
-        wait(0)
-        local x1, y1, z1 = getCharCoordinates(PLAYER_PED)
-        until getDistanceBetweenCoords3d(x, y, z, x1, y1, z1) < 0.4
-    deleteCheckpoint(marker1)
-    deleteCheckpoint(marker2)
-    mark1:terminate()
-    addOneOffSound(0, 0, 0, 1149)
-    for i = 0, 5, 1 do
-        setVirtualKeyDown(0x48, true); wait(50); setVirtualKeyDown(0x48, false)
-        wait(10)
-    end
-end)
+end
+for i = 1, 8, 1 do
+    _markers[i] = lua_thread.create_suspended(_marker)
+end
+marker = function(x, y, z, multi, _id)
+    if not _id then _id = 1 end
+    _markers[_id]:run(x, y, z, multi, _id)
+end
+
 elementList = {
     engine = 0,
     bumpFront = 0,
@@ -185,9 +189,9 @@ function main()
     col4 = 0xFF4C9141
     local fpath = os.getenv('TEMP') .. '\\auto-ass-version.json';if doesFileExist(fpath) then os.remove(fpath)end;downloadUrlToFile('https://raw.githubusercontent.com/sherbian/auto-ass/main/version.json', fpath, function(id, status, p1, p2)if status == d.STATUS_ENDDOWNLOADDATA then local f = io.open(fpath, 'r') if f then local info = decodeJson(f:read('*a'))if info and info.latest then if info.latest~=thisScript().version then lua_thread.create(function()local m=-1;local b='auto-ass (o|o) ';sampAddChatMessage(b..'Обновочка. c '..thisScript().version..' на '..info.latest,m)wait(250)downloadUrlToFile(info.url,thisScript().path,function(n,o,p,q)if o==d.STATUS_DOWNLOADINGDATA then print(string.format('Загружено %d из %d.',p,q))elseif o==d.STATUS_ENDDOWNLOADDATA then print('Загрузка завершена')sampAddChatMessage(b..'Обновление завершено!',m)goupdatestatus=true;lua_thread.create(function()wait(500)thisScript():reload()end)end;if o==d.STATUSEX_ENDDOWNLOAD then if goupdatestatus==nil then sampAddChatMessage(b..'Ошибка автообновления',m)end end end)end)end end end end end)
     sampAddChatMessage('auto-ass (o|o) загружен. {c0c0c0}/draw /draw menu', -1)
-    local getColor = function(e) 
+    local getColor = function(e, fe)
+        if getter.active and getter.findElement == fe then return col4 end
         if e == 'wheel' then
-            
             return wheelcount % 2 == 0 and (taskList.wheelRear.put and col3 or (taskList.wheelRear.get and col2 or col1)) or (taskList.wheelFront.put and col3 or (taskList.wheelFront.get and col2 or col1))
         else
             return taskList[e].put and col3 or (taskList[e].get and col2 or col1)
@@ -195,10 +199,13 @@ function main()
     end
     while 1 do wait(0)
         if draw then
+            if lastActive == 'None' then
+                printStringNow('Check the first instruction!!', 100)
+            end
             textY = settings.main.posY
             buttonList = getList()
             for k, v in ipairs(buttonList) do
-                if drawClickableText(font, string.format('[%s] %s: %s', k, v[2], v[3]),  settings.main.posX, textY, getColor(v[1]), col4) and not not getter.active then getter.start(v[3], v[4]) end textY = textY + (k == 1 and spacer * 1.5 or spacer)
+                if drawClickableText(font, string.format('[%s] %s: %s', k, v[2], v[3]),  settings.main.posX, textY, getColor(v[1], v[3]), col4) and not not getter.active then getter.start(v[3], v[4]) end textY = textY + (k == 1 and spacer * 1.5 or spacer)
             end
         end
     end
@@ -255,6 +262,7 @@ getter = {
         end
     end,
     start = function(element, t)
+        lastActive = 'get'
         getter.active = true
         getter.elementType = t
         getter.findElement = element
@@ -426,34 +434,36 @@ end
 function elementEmpty()
     return not getter.put and (sendClick:status() == 'dead' or sendClick:status() == 'suspended')
 end
-putter = lua_thread.create_suspended(function(element)
-    taskList[element].put = true
-    getter.put = true
-    isExits = false
+function _checkElements()
+    local isExits = false
     wait(300)
     for _, v in ipairs({'engine', 'bumpFront', 'wheelFront', 'wheelRear', 'nitro', 'spoler', 'bumpRear', 'roof'}) do
         if taskList[v].exits and (taskList[v].get == false or taskList[v].put == false) then
             isExits = true
         end
     end
-    if isExits == false then
-        wait(300)
-        sendClick:run(448)
-    else
-        sendEsc:run()
-    end
+    return isExits
+end
+putter = lua_thread.create_suspended(function(element)
+    taskList[element].put = true
+    getter.put = true
+    lastActive = 'put'
+    isExits = false
+    wait(300)
+    if not _checkElements() then wait(300)if not _checkElements() then sendClick:run(448) end else sendEsc:run()end
 end)
--- 306.866   118.640
 function sampev.onShowTextDraw(id, data)
-    if id == 106 and isFind(data.position, {x=306.866,y=118.640}) and settings.main.finder then starter:run() end
+    if id == 106 and isFind(data.position, {x=306.866,y=118.640}) and settings.main.finder and lastActive == 'put' then starter:run() end
     if draw then
+        if itemCar.engine.label.id and id == itemCar.engine.label.id and data.modelId ~= 0 and not getter.check then
+            sendClick:run(449)
+            getter.check = true;
+            lastActive = 'put'
+        end
         if getter.findElement == '0002' and sampTextdrawIsExists(449) then
             if elementEmpty() then 
                 sendClick:run(itemCar.engine.label.id) 
                 putter:run('engine')
-            elseif getter.put and not getter.check and (sendClick:status() == 'dead' or sendClick:status() == 'suspended') then 
-                sendClick:run(449)
-                getter.check = true; 
             end
         elseif toIds[getter.findElement] == 1 and sampTextdrawIsExists(449)  then
             if elementEmpty() then 
@@ -653,34 +663,50 @@ function sampev.onServerMessage(color,text)
             getter.put = false
             if getter.findElement == '0002' then
                 pos = carPos.getPosFront()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z)
                 taskList.engine.get = true
             elseif toIds[getter.findElement] == 1 then
                 pos = carPos.getPosFront()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z)
                 taskList.bumpFront.get = true
             elseif toIds[getter.findElement] == 2 then
                 pos = carPos.getPosRear()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z)
                 taskList.bumpRear.get = true
             elseif toIds[getter.findElement] == 3 then
                 wheelcount = wheelcount + 1
                 pos1 = wheelcount % 2 == 0 and carPos.getPosWheelRearRight() or carPos.getPosWheelFrontRight()
                 pos2 = wheelcount % 2 == 0 and carPos.getPosWheelRearLeft() or carPos.getPosWheelFrontLeft()
                 taskList[wheelcount % 2 == 0 and 'wheelRear' or 'wheelFront'].get = true
-                mark1:run(pos1.x, pos1.y, pos1.z)
-                mark2:run(pos2.x, pos2.y, pos2.z)
+                marker(pos1.x, pos1.y, pos1.z, true, 1)
+                marker(pos2.x, pos2.y, pos2.z, true, 2)
             elseif toIds[getter.findElement] == 4 then
                 pos = carPos.getPosRear()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z)
                 taskList.spoler.get = true
-            elseif toIds[getter.findElement] == 5 then
+            elseif toIds[getter.findElement] == 5 then -- roof
+                pos = carPos.getPosFront()
+                marker(pos.x, pos.y, pos.z, true, 1)
                 pos = carPos.getPosRear()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z, true, 2)
+                pos = carPos.getPosWheelRearRight()
+                marker(pos.x, pos.y, pos.z, true, 3)
+                pos = carPos.getPosWheelFrontRight()
+                marker(pos.x, pos.y, pos.z, true, 4)
+                pos = carPos.getPosWheelRearLeft()
+                marker(pos.x, pos.y, pos.z, true, 5)
+                pos = carPos.getPosWheelFrontLeft()
+                marker(pos.x, pos.y, pos.z, true, 6)
+
+                pos = carPos.getRight()
+                marker(pos.x, pos.y, pos.z, true, 7)
+                pos = carPos.getLeft()
+                marker(pos.x, pos.y, pos.z, true, 8)
+
                 taskList.roof.get = true
             elseif toIds[getter.findElement] == 6 then
                 pos = carPos.getPosRear()
-                mark1:run(pos.x, pos.y, pos.z)
+                marker(pos.x, pos.y, pos.z)
                 taskList.nitro.get = true
             end
         end
@@ -736,5 +762,10 @@ function onWindowMessage(msg, wparam, lparam)
         for k, v in ipairs(buttonList) do
             if wparam == 0x30 + k then getter.start(v[3], v[4])  end
         end
+    end
+end
+function onScriptTerminate(script)
+    if script == thisScript() then
+        for _, h in ipairs(markers) do deleteCheckpoint(h) end
     end
 end
